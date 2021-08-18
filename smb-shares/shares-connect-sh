@@ -1,0 +1,28 @@
+#!/bin/bash
+clear
+echo "Connecting to freenas Sever..."
+echo
+echo
+
+#		---------- Edit Manually ----------
+IP_TO_FREENAS="10.100.100.5"
+USER_NAME_ON_FREENAS="Dan"
+# Get back "Original" user before becomming root with sudo - using home folder
+# **********		IMPORTANT - This MUST be set MANUALLY		**********
+REALUSER_LOGGEDIN="kungen"
+
+
+
+#		---				FIRST Share 			---	
+SHARE="winsharebackup"
+# MOUNTPOINT_FOLDER="/home/kungen/mountpoints/winshares/bakup/"
+MOUNTPOINT_FOLDER="/home/$REALUSER_LOGGEDIN/mountpoints/winshares/bakup/"
+			
+echo "Trying to mount to $SHARE"
+
+sudo mount -t cifs //$IP_TO_FREENAS/$SHARE $MOUNTPOINT_FOLDER -o username=$USER_NAME_ON_FREENAS
+echo "The media share is mounted at $MOUNTPOINT_FOLDER"
+echo 
+#		---				FIRST Share DONE		---	
+
+# Repeat the process for more shares
