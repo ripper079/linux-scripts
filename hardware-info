@@ -1,0 +1,345 @@
+#!/bin/bash
+
+# Author		-	Daniel Oikarainen
+# Description	-	A simple bash script that collect basic information from computer and dumps it to std out
+# Note			-	Sudo Privileges Needed
+# Dependencies	-	dmidecode, lshw and hdparm
+# IDE			-	Geany 1.37
+# Date			-	2021-08-28
+# Restrictions	-	Does NOT work well in a virtualized Environment
+# 				-	Multi graphics card configuration not supported
+#				-	Isci disk not supported
+
+clear
+        
+LINESTRING="";
+SEARCH_STRING=""
+FORMATTED_STRING=""
+
+
+function createFiles()
+{
+	echo "Collecting data..."
+	lshw -short >> file_lshw_short.tmp
+	lshw -class display >> file_lshw_class_display.tmp;
+	echo "done!!!"
+	sleep 1
+	clear
+	
+}
+
+function deleteFiles()
+{
+	# echo "Inside delete files..."
+	rm file_lshw_short.tmp
+	rm file_lshw_class_display.tmp
+}
+
+function printCPUInfo()
+{
+    #Get CPU model
+    echo ""
+    echo "CPU"
+    echo "---------------------------------------------------------------------------------"
+	
+	SEARCH_STRING=": "
+
+    #Prints CPU name												#
+    LINESTRING=`(cat /proc/cpuinfo | grep 'model name' | uniq)`
+    #Removes(trim) character until (and) to character SEARCHSTRING
+    FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+    echo -e "CPU Model:\t\t$FORMATTED_STRING"  
+
+    #Prints Numbers of Cores											#
+    LINESTRING=`(cat /proc/cpuinfo | grep 'cpu cores' | uniq)`
+    FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+    echo -e "Core(s):\t\t$FORMATTED_STRING"
+	   
+    #Prints total numbers of threads for CPU							#
+    LINESTRING=`(sudo dmidecode -t 4 | grep 'Thread Count')`
+    FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+    echo -e "Thread(s):\t\t$FORMATTED_STRING"                  
+                
+	#Print CPU socket type
+	LINESTRING=`(dmidecode -t 4 | grep 'Socket Designation')`
+	FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+	echo -e "CPU Socket:\t\t$FORMATTED_STRING"	
+	
+	# New
+	#Prints Current CPU speed										#
+	LINESTRING=`(dmidecode -s processor-frequency)`	
+	echo -e "CPU Speed:\t\t$LINESTRING"
+		            
+	#Prints Cache Level 1 Data                         				#
+    LINESTRING=`(lscpu | grep 'L1d cache')`
+    FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+    #And remove ALL Leading blank characters
+    FORMATTED_STRING="$(echo -e "${FORMATTED_STRING}" | sed -e 's/^[[:space:]]*//')"
+    echo -e "Cache L1(D):\t\t$FORMATTED_STRING"
+    
+    #Prints Cache Level 1 Instruction                  				#
+    LINESTRING=`(lscpu | grep 'L1i cache')`
+    FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+    #And remove ALL Leading blank characters
+    FORMATTED_STRING="$(echo -e "${FORMATTED_STRING}" | sed -e 's/^[[:space:]]*//')"
+    echo -e "Cache L1(I):\t\t$FORMATTED_STRING"
+    
+    #Prints Total L2 Cache											#
+    LINESTRING=`(lscpu | grep 'L2 cache')`
+    FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+    #And remove ALL Leading blank characters
+    FORMATTED_STRING="$(echo -e "${FORMATTED_STRING}" | sed -e 's/^[[:space:]]*//')"
+    echo -e "Cache L2:\t\t$FORMATTED_STRING"
+    
+		# Alternative L2 cache - if previous buggy
+		# L2_CACHE_CPU=`(lshw -short | grep -E "memory.*L2" | tr -s " " | cut -d " " -f 3)`
+		# echo -e "Cache L2 (Alternative):\t$L2_CACHE_CPU"
+		
+		# OR lscpu -C - and parse
+    
+	#Prints L3 Cache												#
+	LINESTRING=`(lscpu | grep 'L3 cache')`
+	FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+    #And remove ALL Leading blank characters
+    FORMATTED_STRING="$(echo -e "${FORMATTED_STRING}" | sed -e 's/^[[:space:]]*//')"
+    echo -e "Cache L3:\t\t$FORMATTED_STRING"
+    
+		# Alternative L3 cache - if previous buggy
+		# L3_CACHE_CPU=`(lshw -short | grep -E "memory.*L3" | tr -s " " | cut -d " " -f 3)`
+		# echo -e "Cache L3 (Alternative):\t$L3_CACHE_CPU"
+    
+	echo ""
+}
+
+
+function printRAMInfo()
+{
+    echo ""
+    echo "RAM"
+	echo "---------------------------------------------------------------------------------"
+	     
+	# TOTAL_RAM_INSTALLED_COMPUTER=`(lshw -short | grep memory | grep -Ev 'BIOS|cache|DDR2|DDR3|DDR4|DDR4|DDR5' | tr -s " " | cut -d " " -f 3)`
+	TOTAL_RAM_INSTALLED_COMPUTER=`(cat file_lshw_short.tmp | grep memory | grep -Ev 'BIOS|cache|DDR2|DDR3|DDR4|DDR4|DDR5' | tr -s " " | cut -d " " -f 3)`
+	echo -e "Total RAM: \t\t$TOTAL_RAM_INSTALLED_COMPUTER"
+                    
+	#Print memory type 											#
+	MEMORY_TYPE=`(dmidecode --type 17 | grep "Type:" | tr -d "\t" | grep -e "[^Type: Unknown]" | uniq | cut -d ":" -f 2 | cut -d " " -f 2-)`
+    echo -e "Memory Type:\t\t$MEMORY_TYPE"
+
+	# Print Memory Speed											#            
+    SPEEDRAM=`(dmidecode -t 17 | grep "Speed" | tr -d "\t" | sort | uniq | grep -e "^Speed" | grep -e "[^Speed: Unknown]" | cut -d " " -f 2,3)`
+    echo -e "Memory Speed:\t\t$SPEEDRAM"    
+    
+    echo ""
+}
+
+function printMotherBoardInfo()
+{
+	echo ""
+	echo "Motherboard"
+	echo "---------------------------------------------------------------------------------"
+	
+	SEARCH_STRING=": "
+	
+	#Print Manufactor board											#	
+    MANUFACTURER_OF_MOTHERBOARD=`(dmidecode -s baseboard-manufacturer)`
+    echo -e "Manufacturer:\t\t$MANUFACTURER_OF_MOTHERBOARD"
+    
+    #Print Product Name												#    
+    PRODUCT_NAME=`(dmidecode -s baseboard-product-name)`    
+    echo -e "Model:\t\t\t$PRODUCT_NAME"
+    
+    #Print BIOS Vendor												#    
+    BIOS_VENDOR=`(dmidecode -s bios-vendor)`
+    echo -e "Bios Vendor:\t\t$BIOS_VENDOR"    
+    
+    #Print BIOS Version												#    
+    BIOS_VERSION=`(dmidecode -s bios-version)`
+    echo -e "Bios Version:\t\t$BIOS_VERSION"
+        
+    #Print Form factor For RAM										#
+    FORM_FACTOR=`(dmidecode -t 17 | grep "Form Factor" | tr -d "\t" | uniq | cut -d " " -f 3)`
+    echo -e "RAM Form Factor:\t$FORM_FACTOR"
+    
+    #Max Supported RAM Memory										#
+    MAX_RAM=`(dmidecode -t 16 | grep "Maximum Capacity:" | tr -d "\t" | cut -d ":" -f 2 | cut -d " " -f 2-)`
+    echo -e "MAX RAM Capacity:\t$MAX_RAM"
+    
+    #Print number of slots on motherboard							#
+    RAM_SLOTS=`(dmidecode -t 16 | grep "Number Of Devices:" | tr -d "\t" | cut -d ":" -f 2 | cut -d " " -f 2)`    
+    echo -e "RAM slots:\t\t$RAM_SLOTS"
+    
+    #Print number of USED slots on motherboard						#
+    USED_RAM_SLOTS=`(dmidecode -t 17 | grep "Size:" | tr -d "\t" | grep -e "[^Size: No Module Installed]" | wc -l)`
+    echo -e "Used RAM slots:\t\t$USED_RAM_SLOTS"            
+
+    echo ""
+}
+
+function printGPUInfo()
+{
+	echo ""
+	echo "Graphics Card"
+	echo "---------------------------------------------------------------------------------"
+	
+	SEARCH_STRING=": "
+	
+	#Print Vendor Info												#
+	LINESTRING=`(cat file_lshw_class_display.tmp | head -4 | tail -1)`
+		
+    FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+    #And remove ALL Leading blank characters
+    FORMATTED_STRING="$(echo -e "${FORMATTED_STRING}" | sed -e 's/^[[:space:]]*//')"
+    echo -e "Vendor:\t\t\t$FORMATTED_STRING"
+    
+    # Get bus id for VGA controller
+    IDBUS=`(lspci | grep VGA | cut -d " " -f 1)`
+    DRIVER_MODULE_GPU=`(find /sys/ | grep drivers.*$IDBUS | cut -d "/" -f 6)`
+    
+    #Print GPU														#
+    LINESTRING=`(cat file_lshw_class_display.tmp | head -3 | tail -1)`
+    FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+    #And remove ALL Leading blank characters
+    FORMATTED_STRING="$(echo -e "${FORMATTED_STRING}" | sed -e 's/^[[:space:]]*//')"
+    echo -e "GPU:\t\t\t$FORMATTED_STRING - [Driver:$DRIVER_MODULE_GPU]"    
+	
+		# The same information may be extracted from lspci and some parseing
+	
+	echo ""
+}
+
+function printNIC()
+{
+	echo ""
+	echo "Network Interfaces"
+	echo "---------------------------------------------------------------------------------"
+	#Ethernet controller
+	#Create temp file with ALL installed ethernet_nics
+	lspci | grep 'Ethernet controller' >> ethernet_nic.tmp
+	
+	input="./ethernet_nic.tmp"
+	#Loop through file ->Line by Line
+	while IFS= read -r line
+	do
+		LINESTRING=$line				
+		SEARCH_STRING="Ethernet controller: "			
+		# Busid for current network controller	
+		IDBUS=`(echo "$line" | cut -d " " -f 1)`
+		DRIVER_MODULE_NIC=`(find /sys/ | grep drivers.*$IDBUS | cut -d "/" -f 6)`
+		# The name of the enthernet controller
+		FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+		echo -e "Ethernet:\t\t$FORMATTED_STRING - [Driver: $DRIVER_MODULE_NIC]"
+	done < "$input"	
+	#Remove temp file
+	rm ethernet_nic.tmp
+	
+	#Wifi
+	lspci | grep 'Network controller' >> wifi_nic.tmp
+	input="./wifi_nic.tmp"
+	#Loop through file ->Line by Line
+	while IFS= read -r line
+	do
+		LINESTRING=$line
+		SEARCH_STRING="Network controller:"
+		
+		# Busid for current network controller	
+		IDBUS=`(echo "$line" | cut -d " " -f 1)`
+		DRIVER_MODULE_WIFI=`(find /sys/ | grep drivers.*$IDBUS | cut -d "/" -f 6)`
+		
+		FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+		#And remove ALL Leading blank characters
+		FORMATTED_STRING="$(echo -e "${FORMATTED_STRING}" | sed -e 's/^[[:space:]]*//')"
+		echo -e "Wifi:\t\t\t$FORMATTED_STRING - [Driver: $DRIVER_MODULE_WIFI]"
+	done < "$input"
+	#Remove temp file
+	rm wifi_nic.tmp
+	echo ""
+}
+
+function printAudio()
+{
+	echo ""
+	echo "Audio"
+	echo "---------------------------------------------------------------------------------"
+	lspci | grep 'Audio device' >> audio.tmp
+	input="./audio.tmp"
+	#Loop through file ->Line by Line
+	while IFS= read -r line
+	do
+		LINESTRING=$line
+		SEARCH_STRING="Audio device:"
+		
+		# Busid for current audio device	
+		IDBUS=`(echo "$line" | cut -d " " -f 1)`
+		DRIVER_MODULE_AUDIO=`(find /sys/ | grep drivers.*$IDBUS | cut -d "/" -f 6)`
+		
+		FORMATTED_STRING=${LINESTRING#*$SEARCH_STRING}
+		#And remove ALL Leading blank characters
+		FORMATTED_STRING="$(echo -e "${FORMATTED_STRING}" | sed -e 's/^[[:space:]]*//')"
+		echo -e "Audio:\t\t\t$FORMATTED_STRING - [Driver: $DRIVER_MODULE_AUDIO]"
+		
+	done < "$input"
+	
+	rm audio.tmp
+	echo ""
+}
+
+function printHDD()
+{
+	echo ""
+	echo "Storage"
+	echo "---------------------------------------------------------------------------------"
+	# Exclude cd/dvd disc blocks
+	lsblk -nd | cut -d " " -f1 | grep -Ev 'sr0|scd0' >> storage_discs.tmp
+	
+	input="./storage_discs.tmp"
+	#Loop through file ->Line by Line
+	COUNTER=0;
+	while IFS= read -r line
+	do
+		COUNTER=$(( COUNTER + 1 ))		
+		# Get Model Number, replace multiple spaces with one and extract Name of model
+		MODELNUMBER=`(hdparm -I /dev/$line | grep "Model Number"  | awk '{$2=$2};1' | cut -d ":" -f2 | awk '{$1=$1};1')`
+		# Append /dev/
+		CAPACITY=`(hdparm -I /dev/$line | grep "device size with M = 1000" | cut -d "(" -f2 | cut -d ")" -f1)`		
+		echo -e "Storage $COUNTER:\t\t$MODELNUMBER - [$CAPACITY]"		
+	done < "$input"
+	rm storage_discs.tmp
+	
+	echo ""
+}
+
+function printInputDevices()
+{
+	echo ""
+	echo "Misc"
+	echo "---------------------------------------------------------------------------------"
+	
+	cat file_lshw_short.tmp | grep input | tr -s " " | cut -d " " -f 3- >> all_input_devices.tmp
+
+	input="./all_input_devices.tmp"
+	#Loop through file ->Line by Line
+	while IFS= read -r line
+	do
+		LINESTRING=$line		
+		echo -e "Input Device:\t\t$LINESTRING"
+	done < "$input"
+	
+	rm all_input_devices.tmp
+	echo ""
+}
+
+# Reduce lshw calls - Creating temporary files - For efficiency
+createFiles
+
+printMotherBoardInfo
+printCPUInfo
+printRAMInfo
+printGPUInfo
+printHDD
+printNIC
+printAudio
+printInputDevices
+
+# Cleanup temporary files
+deleteFiles
