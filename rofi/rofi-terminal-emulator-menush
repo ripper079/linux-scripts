@@ -1,0 +1,55 @@
+#!/bin/bash
+
+
+# Kitty - For speed
+kitty="Kitty"
+fullpathtokitty="/usr/bin/kitty"
+
+# Sakura - For simplicity
+sakura="Sakura"
+fullpathtosakura="/usr/bin/sakura"
+
+# urxvt aka rxvt-unicode - For customization
+urxvt="urxvt"
+fullpathtourxvt="/usr/bin/urxvt"
+
+# urxvt without window decoration
+urxvtWOBorderDec="urxvt [Without window decoration]"
+fullpathtourxvtWOBorderDec='urxvt -bl'
+
+
+
+# Kitty
+if [ x"$@" = x"$kitty" ]; then	
+    # The preferred way of doing it in bash
+    # https://github.com/davatorium/rofi/blob/next/doc/rofi-script.5.markdown
+    coproc ( $fullpathtokitty > /dev/null  2>1 )
+    exit 0
+fi
+
+# Sakura
+if [ x"$@" = x"$sakura" ]; then	    
+    coproc ( $fullpathtosakura > /dev/null  2>1 )
+    exit 0
+fi
+
+# urxvt
+if [ x"$@" = x"$urxvt" ]; then	    
+    coproc ( $fullpathtourxvt > /dev/null  2>1 )
+    exit 0
+fi
+
+# urxvt without window decoration
+if [ x"$@" = x"$urxvtWOBorderDec" ]; then	    
+    coproc ( $fullpathtourxvtWOBorderDec > /dev/null  2>1 )
+    exit 0
+fi
+
+
+
+# Display all availible terminal emulators
+echo $kitty
+echo $sakura
+echo $urxvt
+echo $urxvtWOBorderDec
+
